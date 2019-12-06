@@ -1,0 +1,23 @@
+{
+  "name": "db-p2p",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "sails",
+    "waterline",
+    "p2p"
+  ],
+  "author": "42team",
+  "license": "MIT",
+  "sails": {
+    "isHook": true
+  },
+  "dependencies": {
+    "p2p": "^0.10.2",
+    "sails": "~0.12.14"
+  }
+}
