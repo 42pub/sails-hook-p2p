@@ -21,6 +21,7 @@ module.exports.p2p = {
 ```
 
 Config description:
+
 |name|type|description
 |---|---|---
 |peers|Array of peer|array of known peers
