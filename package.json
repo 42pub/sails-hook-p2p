@@ -17,6 +17,7 @@
     "isHook": true
   },
   "dependencies": {
+    "object-hash": "^2.0.2",
     "sails": "~0.12.14",
     "uuid": "^3.3.3",
     "socket.io": "^2.3.0",
