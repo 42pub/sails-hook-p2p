@@ -1,5 +1,5 @@
 {
-  "name": "db-p2p",
+  "name": "sails-hook-p2p",
   "version": "0.0.2",
   "description": "",
   "main": "index.js",
@@ -11,6 +11,16 @@
     "waterline",
     "p2p"
   ],
+  "contributors": [
+    {
+      "name": "Ilya Dolmatov",
+      "email": "dolmatoffilya@gmail.com"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/42Sails/sails-hook-p2p.git"
+  },
   "author": "42team",
   "license": "MIT",
   "sails": {
@@ -18,7 +28,6 @@
   },
   "dependencies": {
     "object-hash": "^2.0.2",
-    "sails": "~0.12.14",
     "uuid": "^3.3.3",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.0",
