@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha test/bootstrap.js './test/{,!(fixture)/**}/*.test.js' --exit",
+    "test:init": "npm i && cd ./test/fixture && npm i --no-package-lock --prefix ./ && cd -"
   },
   "keywords": [
     "sails",
@@ -32,5 +33,8 @@
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.0",
     "object.fromentries": "^2.0.2"
+  },
+  "devDependencies": {
+    "mocha": "^10.0.0"
   }
 }
