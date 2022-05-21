@@ -7,14 +7,10 @@
   "dependencies": {
     "sails-hook-p2p": "file:../..",
     "include-all": "^1.0.8",
-    "patch-package": "latest",
     "rc": "latest",
     "request": "^2.88.2",
     "sails": "latest",
     "sails-hook-orm": "latest"
-  },
-  "scripts": {
-    "postinstall": "patch-package --patch-dir=node_modules/dark-sails"
   },
   "main": "app.js",
   "repository": {
