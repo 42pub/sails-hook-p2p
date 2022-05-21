@@ -1,4 +1,6 @@
-#sails-hook-p2p
+# sails-hook-p2p
+<span class="badge-npmversion"><a href="https://npmjs.org/package/sails-hook-p2p" title="View this project on NPM"><img src="https://img.shields.io/npm/v/sails-hook-p2p.svg" alt="NPM version" /></a></span>
+
 
 Config example:
 ```js
