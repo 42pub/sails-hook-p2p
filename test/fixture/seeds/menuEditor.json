@@ -1,0 +1,21 @@
+[
+  {
+    "id": "menuMap1",
+    "enable": true,
+    "concept": "self-delivery",
+    "menuMapConfig": {
+      "actions": [
+        {
+          "id": "125",
+          "type": "clone_group_by_id",
+          "params": {
+            "target": "ggggggggggggggggggg222",
+            "fromOrigin": true,
+            "destination": null,
+            "recursive": true
+          }
+        }
+      ]
+    }
+  }
+]
