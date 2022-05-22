@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test/bootstrap.js './test/{,!(fixture)/**}/*.test.js' --exit",
-    "test:init": "npm i && cd ./test/fixture && npm i --no-package-lock --prefix ./ && cd -"
+    "test": "mocha test/bootstrap.js './test/{,!(fixtures)/**}/*.test.js' --exit",
+    "test:init": "cd test && bash init.sh"
   },
   "keywords": [
     "sails",

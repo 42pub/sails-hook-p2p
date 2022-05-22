@@ -1,0 +1,22 @@
+{
+  "name": "test-app",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Sails test application",
+  "keywords": [],
+  "dependencies": {
+    "include-all": "^1.0.8",
+    "rc": "latest",
+    "request": "^2.88.2",
+    "sails": "latest",
+    "sails-hook-orm": "latest",
+    "sails-hook-p2p": "file:../../.."
+  },
+  "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/42pub/sails-hook-p2p.git"
+  },
+  "author": "42pub",
+  "license": "MIT"
+}

@@ -9,7 +9,7 @@ module.exports = {
   log: {
     level: 'info'
   },
-  port: process.env.PORT === undefined ? 42772 : process.env.PORT,
+  port: process.env.PORT === undefined ? 1337 : process.env.PORT,
   log: {
    level: "verbose"
   }
