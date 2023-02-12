@@ -1,3 +1,5 @@
 test/fixture/.tmp
 node_modules
 package-lock.json
+dist
+.idea
