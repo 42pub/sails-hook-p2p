@@ -1,14 +1,12 @@
-import {Server} from "https";
+import http from 'http';
+import https from 'https';
+import uuid from 'uuid/v4';
+import { Server, Socket as ServerSocket } from 'socket.io';
+import { io, Socket as ClientSocket } from 'socket.io-client';
+
 import Peer from "./Peer";
 import KnownPeers from "./KnownPeers";
-
-const http = require('http');
-const https = require('https');
-import IOServer from 'socket.io';
-import client from 'socket.io-client';
-import SocketIO from "socket.io";
 import Logger from "../Logger";
-const uuid = require('uuid/v4');
 
 interface CustomEvent {
   name: string;
@@ -27,7 +25,7 @@ interface MeshOptions {
 }
 
 interface Clients {
-  [x: string]: SocketIO.Socket | SocketIOClient.Socket
+  [x: string]: ServerSocket | ClientSocket
 }
 
 interface Listener {
@@ -57,11 +55,11 @@ export default class Mesh {
   private readonly listeners: Listeners;
   private readonly customEvents: CustomEvent[];
   private readonly maxReconnect: number;
-  private readonly server: Server;
+  private readonly server: https.Server | http.Server;
   public readonly clients: Clients;
   private state: MeshState;
   private onConnectionElements: Peer[];
-  private serverSocket: IOServer.Server;
+  private serverSocket: Server;
   private logger: Logger;
 
   public constructor(options: MeshOptions) {
@@ -92,7 +90,7 @@ export default class Mesh {
       this.server = http.createServer();
     }
 
-    this.serverSocket = new IOServer(this.server);
+    this.serverSocket = new Server(this.server);
 
     const otherPeers = options.knownPeers || [] as Peer[];
 
@@ -173,7 +171,7 @@ export default class Mesh {
     });
   }
 
-  private setupClientListeners(client: SocketIOClient.Socket, peer: Peer) {
+  private setupClientListeners(client: ClientSocket, peer: Peer) {
     let counter = 0;
 
     client.on('get info', (cb: (info: Info) => void) => {
@@ -232,7 +230,7 @@ export default class Mesh {
     for (let peer of newPeers) {
       this.logger.info('connectNewPeers > try to connect to', peer.getUrl());
 
-      const connect = client.connect(peer.getUrl());
+      const connect = io(peer.getUrl());
       this.setupClientListeners(connect, peer);
     }
   }
