@@ -1,53 +1,14 @@
-import {Server} from "https";
+import http from 'http';
+import https from 'https';
+import uuid from 'uuid/v4';
+import { Server, Socket as ServerSocket } from 'socket.io';
+import { io, Socket as ClientSocket } from 'socket.io-client';
+
 import Peer from "./Peer";
 import KnownPeers from "./KnownPeers";
-
-const http = require('http');
-const https = require('https');
-import IOServer from 'socket.io';
-import client from 'socket.io-client';
-import SocketIO from "socket.io";
 import Logger from "../Logger";
-const uuid = require('uuid/v4');
-
-interface CustomEvent {
-  name: string;
-  cb: (...any) => any;
-}
-
-interface MeshOptions {
-  showLog: boolean;
-  password?: string;
-  maxReconnect?: number;
-  host: string;
-  port: string;
-  certificate?: string;
-  privateKey?: string;
-  knownPeers?: Peer[];
-}
-
-interface Clients {
-  [x: string]: SocketIO.Socket | SocketIOClient.Socket
-}
-
-interface Listener {
-  fn: (...args: any) => void;
-  once: boolean;
-}
-
-interface Listeners {
-  [x: string]: Listener[]
-}
-
-interface Info {
-  password?: string;
-  knownPeers: KnownPeers;
-  self: Peer;
-}
-
-type MeshState = 'lonely' | 'connection' | 'joined';
-
-type AnyFunc = (...args: any) => any;
+import {AnyFunc, Clients, Info, Listener, Listeners, MeshOptions, MeshState, CustomEvent} from "./MeshUsefulTypes";
+import {ClientToServerEvents, ServerToClientEvents} from "./MeshSocketTypes";
 
 export default class Mesh {
   private readonly showLog: boolean;
@@ -57,11 +18,11 @@ export default class Mesh {
   private readonly listeners: Listeners;
   private readonly customEvents: CustomEvent[];
   private readonly maxReconnect: number;
-  private readonly server: Server;
+  private readonly server: https.Server | http.Server;
   public readonly clients: Clients;
   private state: MeshState;
   private onConnectionElements: Peer[];
-  private serverSocket: IOServer.Server;
+  private serverSocket: Server;
   private logger: Logger;
 
   public constructor(options: MeshOptions) {
@@ -92,7 +53,7 @@ export default class Mesh {
       this.server = http.createServer();
     }
 
-    this.serverSocket = new IOServer(this.server);
+    this.serverSocket = new Server<ServerToClientEvents>(this.server);
 
     const otherPeers = options.knownPeers || [] as Peer[];
 
@@ -109,13 +70,13 @@ export default class Mesh {
   }
 
   private setupServerListeners() {
-    this.serverSocket.on('connection', socket => {
+    this.serverSocket.on('connection', (socket: ServerSocket<ClientToServerEvents, ServerToClientEvents>) => {
 
       this.logger.info('on server connection');
 
       // setup default events
-      socket.emit('get info', (info: Info) => {
-        this.logger.info('get info cb');
+      socket.emit('getInfo', (info: Info) => {
+        this.logger.info('getInfo cb');
 
         if (this.password) {
           if (!info.password || info.password !== this.password) {
@@ -142,7 +103,7 @@ export default class Mesh {
         this.clients[info.self.id] = socket;
         this.logger.info('server connect new clients', Object.keys(this.clients));
 
-        socket.emit('send peers', {
+        socket.emit('sendPeers', {
           peers: this.knownPeers.peers,
           self: this.self
         });
@@ -168,19 +129,21 @@ export default class Mesh {
       //  custom events
       for (let on of this.customEvents) {
         this.logger.info('add listener', on.name);
-        socket.on(on.name, on.cb);
+        // cast to never because should subscribe on all custom events but cannot get all custom event data
+        // TODO: or can? Add generic data to the class like socket.io?
+        socket.on(<never>on.name, on.cb);
       }
     });
   }
 
-  private setupClientListeners(client: SocketIOClient.Socket, peer: Peer) {
+  private setupClientListeners(client: ClientSocket, peer: Peer) {
     let counter = 0;
 
-    client.on('get info', (cb: (info: Info) => void) => {
+    client.on('getInfo', (cb: (info: Info) => void) => {
       // reset counter if ok
       counter = 0;
 
-      this.logger.info('on get info');
+      this.logger.info('on getInfo');
 
       return cb({
         password: this.password,
@@ -189,7 +152,7 @@ export default class Mesh {
       });
     });
 
-    client.on('send peers', (info: Info) => {
+    client.on('sendPeers', (info: Info) => {
       this.logger.info('connect new peers', info);
 
       if (!peer.id) {
@@ -232,7 +195,7 @@ export default class Mesh {
     for (let peer of newPeers) {
       this.logger.info('connectNewPeers > try to connect to', peer.getUrl());
 
-      const connect = client.connect(peer.getUrl());
+      const connect = io(peer.getUrl());
       this.setupClientListeners(connect, peer);
     }
   }
