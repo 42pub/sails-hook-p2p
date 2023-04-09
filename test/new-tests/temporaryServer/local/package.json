@@ -5,12 +5,17 @@
   "description": "Sails test application",
   "keywords": [],
   "dependencies": {
-    "sails-hook-p2p": "file:../../..",
     "include-all": "^1.0.8",
     "rc": "latest",
     "request": "^2.88.2",
+    "patch-package": "^6.4.7",
+    "dark-sails": "^1.0.0",
     "sails": "latest",
-    "sails-hook-orm": "latest"
+    "sails-hook-orm": "latest",
+    "sails-hook-p2p": "file:../../../.."
+  },
+  "scripts": {
+    "postinstall": "patch-package --patch-dir=node_modules/dark-sails"
   },
   "main": "app.js",
   "repository": {

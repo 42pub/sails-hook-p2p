@@ -1,4 +1,4 @@
-import Peer from "./Peer";
+import Peer, {PeerData} from "./Peer";
 import {Socket as ServerSocket} from "socket.io/dist/socket";
 import {Socket as ClientSocket} from "socket.io-client";
 import KnownPeers from "./KnownPeers";
@@ -16,7 +16,7 @@ export interface MeshOptions {
   port: string;
   certificate?: string;
   privateKey?: string;
-  knownPeers?: Peer[];
+  knownPeers?: PeerData[];
 }
 
 export interface Clients {

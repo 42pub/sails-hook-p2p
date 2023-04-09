@@ -8,7 +8,7 @@ declare const sails: any;
 const uuid = require('uuid/v4');
 const fromEntries = require('object.fromentries');
 
-const conf = sails.config.p2p;
+let conf;
 
 const modelsPublic = getModelsForAction('public');
 const modelsGrab = getModelsForAction('grab');
@@ -39,12 +39,16 @@ interface Values {
 
 export default function (sails) {
   return async function (cb) {
-    // validate that configuration exists
-    if (!conf)
-      return cb();
+    conf = sails.config.p2p;
 
-    if (!conf.peers)
+    // validate that configuration exists
+    if (!conf) {
       return cb();
+    }
+
+    if (!conf.peers) {
+      return cb();
+    }
 
     // use polyfill if no Object.fromEntries
     if (!Object.fromEntries) {

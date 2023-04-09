@@ -4,7 +4,7 @@ import uuid from 'uuid/v4';
 import { Server, Socket as ServerSocket } from 'socket.io';
 import { io, Socket as ClientSocket } from 'socket.io-client';
 
-import Peer from "./Peer";
+import Peer, {PeerData} from "./Peer";
 import KnownPeers from "./KnownPeers";
 import Logger from "../Logger";
 import {AnyFunc, Clients, Info, Listener, Listeners, MeshOptions, MeshState, CustomEvent} from "./MeshUsefulTypes";
@@ -31,7 +31,6 @@ export default class Mesh {
     }
 
     this.showLog = options.showLog || false;
-    this.logger = new Logger('Mesh', this.showLog);
     this.password = options.password;
     this.maxReconnect = options.maxReconnect || 3;
 
@@ -41,6 +40,8 @@ export default class Mesh {
     this.onConnectionElements = [];
     this.self = new Peer(options.host, options.port, uuid());
     this.knownPeers = new KnownPeers(this.self);
+
+    this.logger = new Logger(`Mesh-${this.self.id}`, this.showLog);
 
     this.logger.info('MY ID', this.self.id);
 
@@ -90,15 +91,14 @@ export default class Mesh {
 
         this.logger.info('server connect new clients', info.knownPeers);
 
-        let newPeer = info.self;
+        let newPeer = Peer.getPeer(info.self);
 
         if (!newPeer.host || newPeer.host === "localhost") {
           let remoteAddress = socket.client.conn.remoteAddress.split(':');
-          newPeer.host = remoteAddress[remoteAddress.length - 1]; // TODO: check is it needed
+          newPeer = Peer.getPeer(Object.assign({host: remoteAddress}, info.self));
         }
 
         this.knownPeers.add(newPeer);
-        this.connectNewPeers(info.knownPeers.peers);
 
         this.clients[info.self.id] = socket;
         this.logger.info('server connect new clients', Object.keys(this.clients));
@@ -130,7 +130,6 @@ export default class Mesh {
       for (let on of this.customEvents) {
         this.logger.info('add listener', on.name);
         // cast to never because should subscribe on all custom events but cannot get all custom event data
-        // TODO: or can? Add generic data to the class like socket.io?
         socket.on(<never>on.name, on.cb);
       }
     });
@@ -154,10 +153,7 @@ export default class Mesh {
 
     client.on('sendPeers', (info: Info) => {
       this.logger.info('connect new peers', info);
-
-      if (!peer.id) {
-        peer.id = info.self.id; // TODO: check is it needed
-      }
+      peer.id = peer.id || info.self.id;
 
       this.clients[peer.id] = client;
 
@@ -165,7 +161,6 @@ export default class Mesh {
 
       for (let on of this.customEvents) {
         this.logger.info('add listener', on.name);
-
         client.on(on.name, on.cb);
       }
 
@@ -186,10 +181,14 @@ export default class Mesh {
 
       this.logger.info('client', key, 'was disconnected, clients left', Object.keys(this.clients));
     });
+
+    client.on('connect_error', (err) => {
+      console.error(`Connection error: ${err.message}`);
+    });
   }
 
-  private connectNewPeers(newPeers: Peer[]) {
-    newPeers = this.knownPeers.add(newPeers);
+  private connectNewPeers(newPeersData: PeerData[]) {
+    const newPeers = this.knownPeers.add(newPeersData);
     this.onConnectionElements.push(...newPeers);
 
     for (let peer of newPeers) {
@@ -286,6 +285,3 @@ export default class Mesh {
     return Object.keys(object).find(key => object[key] === value);
   }
 }
-
-
-

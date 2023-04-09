@@ -5,7 +5,7 @@ export interface PeerData {
 }
 
 export default class Peer implements PeerData {
-  private _host: string;
+  private readonly _host: string;
   public readonly port: string;
   public id: string;
 
@@ -23,16 +23,16 @@ export default class Peer implements PeerData {
     this.id = id;
   }
 
+  static getPeer(peer: Peer) {
+    return new Peer(peer.host || peer._host, peer.port, peer.id);
+  }
+
   getUrl() {
-    return `https://${this._host}:${this.port}`;
+    // TODO: create an option to choose secure connection or not should be used
+    return `http://${this._host}:${this.port}`;
   }
 
   get host() {
     return this._host;
   }
-
-  set host(host: string) {
-    this._host = host;
-  }
 }
-
