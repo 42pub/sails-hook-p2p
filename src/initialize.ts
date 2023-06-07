@@ -114,7 +114,7 @@ function initializeListeners(mesh: Mesh) {
     const models = sails.models;
     for (let modelName of Object.keys(models)) {
       if (!modelsGrab.length || modelsGrab.includes(modelName)) {
-        patchModelAttributes(models[modelName], mesh.self.id);
+        patchModelAttributes(models[modelName]);
       }
     }
 
@@ -245,9 +245,9 @@ function setupListeners(mesh: Mesh, nodeData: NodeData, lastUpdate: number) {
   });
 }
 
-function patchModelAttributes(model: Model, id: string) {
-  model.attributes.peerIdEmitFrom = {type: 'string', defaultsTo: id, required: false};
-  model.attributes.p2pId = {type: 'string', unique: true, required: false};
+function patchModelAttributes(model: Model) {
+  model.attributes.peerIdEmitFrom = {type: 'string'};
+  model.attributes.p2pId = {type: 'string'};
 }
 
 function patchModels(mesh: Mesh): void {
@@ -257,7 +257,7 @@ function patchModels(mesh: Mesh): void {
     if (!modelsPublic.length || modelsPublic.includes(modelName)) {
       let model = models[modelName];
 
-      patchModelAttributes(model, mesh.self.id);
+      patchModelAttributes(model);
 
       const patch = (model: any, action: string, func: (values: Values) => void) => {
         model[action] = (previousAction =>

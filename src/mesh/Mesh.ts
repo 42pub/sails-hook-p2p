@@ -10,6 +10,8 @@ import Logger from "../Logger";
 import {AnyFunc, Clients, Info, Listener, Listeners, MeshOptions, MeshState, CustomEvent} from "./MeshUsefulTypes";
 import {ClientToServerEvents, ServerToClientEvents} from "./MeshSocketTypes";
 
+declare const sails: any;
+
 export default class Mesh {
   private readonly showLog: boolean;
   public readonly self: Peer;
@@ -45,22 +47,11 @@ export default class Mesh {
 
     this.logger.info('MY ID', this.self.id);
 
-    if (options.certificate && options.privateKey) {
-      this.server = https.createServer({
-        key: options.privateKey,
-        cert: options.certificate
-      });
-    } else {
-      this.server = http.createServer();
-    }
+    this.server = sails.hooks.http.server;
 
     this.serverSocket = new Server<ServerToClientEvents>(this.server);
 
     const otherPeers = options.knownPeers || [] as Peer[];
-
-    this.server.listen(this.self.port, () => {
-      this.logger.info('Server started on port', this.self.port);
-    });
 
     this.clients = {};
     if (otherPeers.length) {

@@ -45,7 +45,7 @@ describe('Mesh connection', function () {
           peers: [
             {
               host: "127.0.0.1",
-              port: MAIN_PORT + 1
+              port: MAIN_PORT
             }
           ],
           migrate: true,
