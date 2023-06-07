@@ -9,7 +9,6 @@ describe('ORM lifecycles callbacks', function () {
     it('afterCreate ping pong', async () => {
         this.timeout(50000)
         await sleep(6000)
-        console.log(11111,sails.hooks.p2p.mesh)
     });
 
 

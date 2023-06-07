@@ -1,53 +1,16 @@
-import {Server} from "https";
-import Peer from "./Peer";
+import http from 'http';
+import https from 'https';
+import uuid from 'uuid/v4';
+import { Server, Socket as ServerSocket } from 'socket.io';
+import { io, Socket as ClientSocket } from 'socket.io-client';
+
+import Peer, {PeerData} from "./Peer";
 import KnownPeers from "./KnownPeers";
-
-const http = require('http');
-const https = require('https');
-import IOServer from 'socket.io';
-import client from 'socket.io-client';
-import SocketIO from "socket.io";
 import Logger from "../Logger";
-const uuid = require('uuid/v4');
+import {AnyFunc, Clients, Info, Listener, Listeners, MeshOptions, MeshState, CustomEvent} from "./MeshUsefulTypes";
+import {ClientToServerEvents, ServerToClientEvents} from "./MeshSocketTypes";
 
-interface CustomEvent {
-  name: string;
-  cb: (...any) => any;
-}
-
-interface MeshOptions {
-  showLog: boolean;
-  password?: string;
-  maxReconnect?: number;
-  host: string;
-  port: string;
-  certificate?: string;
-  privateKey?: string;
-  knownPeers?: Peer[];
-}
-
-interface Clients {
-  [x: string]: SocketIO.Socket | SocketIOClient.Socket
-}
-
-interface Listener {
-  fn: (...args: any) => void;
-  once: boolean;
-}
-
-interface Listeners {
-  [x: string]: Listener[]
-}
-
-interface Info {
-  password?: string;
-  knownPeers: KnownPeers;
-  self: Peer;
-}
-
-type MeshState = 'lonely' | 'connection' | 'joined';
-
-type AnyFunc = (...args: any) => any;
+declare const sails: any;
 
 export default class Mesh {
   private readonly showLog: boolean;
@@ -57,11 +20,11 @@ export default class Mesh {
   private readonly listeners: Listeners;
   private readonly customEvents: CustomEvent[];
   private readonly maxReconnect: number;
-  private readonly server: Server;
+  private readonly server: https.Server | http.Server;
   public readonly clients: Clients;
   private state: MeshState;
   private onConnectionElements: Peer[];
-  private serverSocket: IOServer.Server;
+  private serverSocket: Server;
   private logger: Logger;
 
   public constructor(options: MeshOptions) {
@@ -70,7 +33,6 @@ export default class Mesh {
     }
 
     this.showLog = options.showLog || false;
-    this.logger = new Logger('Mesh', this.showLog);
     this.password = options.password;
     this.maxReconnect = options.maxReconnect || 3;
 
@@ -81,24 +43,15 @@ export default class Mesh {
     this.self = new Peer(options.host, options.port, uuid());
     this.knownPeers = new KnownPeers(this.self);
 
+    this.logger = new Logger(`Mesh-${this.self.id}`, this.showLog);
+
     this.logger.info('MY ID', this.self.id);
 
-    if (options.certificate && options.privateKey) {
-      this.server = https.createServer({
-        key: options.privateKey,
-        cert: options.certificate
-      });
-    } else {
-      this.server = http.createServer();
-    }
+    this.server = sails.hooks.http.server;
 
-    this.serverSocket = new IOServer(this.server);
+    this.serverSocket = new Server<ServerToClientEvents>(this.server);
 
     const otherPeers = options.knownPeers || [] as Peer[];
-
-    this.server.listen(this.self.port, () => {
-      this.logger.info('Server started on port', this.self.port);
-    });
 
     this.clients = {};
     if (otherPeers.length) {
@@ -109,13 +62,13 @@ export default class Mesh {
   }
 
   private setupServerListeners() {
-    this.serverSocket.on('connection', socket => {
+    this.serverSocket.on('connection', (socket: ServerSocket<ClientToServerEvents, ServerToClientEvents>) => {
 
       this.logger.info('on server connection');
 
       // setup default events
-      socket.emit('get info', (info: Info) => {
-        this.logger.info('get info cb');
+      socket.emit('getInfo', (info: Info) => {
+        this.logger.info('getInfo cb');
 
         if (this.password) {
           if (!info.password || info.password !== this.password) {
@@ -129,20 +82,19 @@ export default class Mesh {
 
         this.logger.info('server connect new clients', info.knownPeers);
 
-        let newPeer = info.self;
+        let newPeer = Peer.getPeer(info.self);
 
         if (!newPeer.host || newPeer.host === "localhost") {
           let remoteAddress = socket.client.conn.remoteAddress.split(':');
-          newPeer.host = remoteAddress[remoteAddress.length - 1]; // TODO: check is it needed
+          newPeer = Peer.getPeer(Object.assign({host: remoteAddress}, info.self));
         }
 
         this.knownPeers.add(newPeer);
-        this.connectNewPeers(info.knownPeers.peers);
 
         this.clients[info.self.id] = socket;
         this.logger.info('server connect new clients', Object.keys(this.clients));
 
-        socket.emit('send peers', {
+        socket.emit('sendPeers', {
           peers: this.knownPeers.peers,
           self: this.self
         });
@@ -168,19 +120,20 @@ export default class Mesh {
       //  custom events
       for (let on of this.customEvents) {
         this.logger.info('add listener', on.name);
-        socket.on(on.name, on.cb);
+        // cast to never because should subscribe on all custom events but cannot get all custom event data
+        socket.on(<never>on.name, on.cb);
       }
     });
   }
 
-  private setupClientListeners(client: SocketIOClient.Socket, peer: Peer) {
+  private setupClientListeners(client: ClientSocket, peer: Peer) {
     let counter = 0;
 
-    client.on('get info', (cb: (info: Info) => void) => {
+    client.on('getInfo', (cb: (info: Info) => void) => {
       // reset counter if ok
       counter = 0;
 
-      this.logger.info('on get info');
+      this.logger.info('on getInfo');
 
       return cb({
         password: this.password,
@@ -189,12 +142,9 @@ export default class Mesh {
       });
     });
 
-    client.on('send peers', (info: Info) => {
+    client.on('sendPeers', (info: Info) => {
       this.logger.info('connect new peers', info);
-
-      if (!peer.id) {
-        peer.id = info.self.id; // TODO: check is it needed
-      }
+      peer.id = peer.id || info.self.id;
 
       this.clients[peer.id] = client;
 
@@ -202,7 +152,6 @@ export default class Mesh {
 
       for (let on of this.customEvents) {
         this.logger.info('add listener', on.name);
-
         client.on(on.name, on.cb);
       }
 
@@ -223,16 +172,20 @@ export default class Mesh {
 
       this.logger.info('client', key, 'was disconnected, clients left', Object.keys(this.clients));
     });
+
+    client.on('connect_error', (err) => {
+      console.error(`Connection error: ${err.message}`);
+    });
   }
 
-  private connectNewPeers(newPeers: Peer[]) {
-    newPeers = this.knownPeers.add(newPeers);
+  private connectNewPeers(newPeersData: PeerData[]) {
+    const newPeers = this.knownPeers.add(newPeersData);
     this.onConnectionElements.push(...newPeers);
 
     for (let peer of newPeers) {
       this.logger.info('connectNewPeers > try to connect to', peer.getUrl());
 
-      const connect = client.connect(peer.getUrl());
+      const connect = io(peer.getUrl());
       this.setupClientListeners(connect, peer);
     }
   }
@@ -323,6 +276,3 @@ export default class Mesh {
     return Object.keys(object).find(key => object[key] === value);
   }
 }
-
-
-

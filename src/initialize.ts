@@ -8,7 +8,7 @@ declare const sails: any;
 const uuid = require('uuid/v4');
 const fromEntries = require('object.fromentries');
 
-const conf = sails.config.p2p;
+let conf;
 
 const modelsPublic = getModelsForAction('public');
 const modelsGrab = getModelsForAction('grab');
@@ -39,12 +39,16 @@ interface Values {
 
 export default function (sails) {
   return async function (cb) {
-    // validate that configuration exists
-    if (!conf)
-      return cb();
+    conf = sails.config.p2p;
 
-    if (!conf.peers)
+    // validate that configuration exists
+    if (!conf) {
       return cb();
+    }
+
+    if (!conf.peers) {
+      return cb();
+    }
 
     // use polyfill if no Object.fromEntries
     if (!Object.fromEntries) {
@@ -110,7 +114,7 @@ function initializeListeners(mesh: Mesh) {
     const models = sails.models;
     for (let modelName of Object.keys(models)) {
       if (!modelsGrab.length || modelsGrab.includes(modelName)) {
-        patchModelAttributes(models[modelName], mesh.self.id);
+        patchModelAttributes(models[modelName]);
       }
     }
 
@@ -241,9 +245,9 @@ function setupListeners(mesh: Mesh, nodeData: NodeData, lastUpdate: number) {
   });
 }
 
-function patchModelAttributes(model: Model, id: string) {
-  model.attributes.peerIdEmitFrom = {type: 'string', defaultsTo: id, required: false};
-  model.attributes.p2pId = {type: 'string', unique: true, required: false};
+function patchModelAttributes(model: Model) {
+  model.attributes.peerIdEmitFrom = {type: 'string'};
+  model.attributes.p2pId = {type: 'string'};
 }
 
 function patchModels(mesh: Mesh): void {
@@ -253,7 +257,7 @@ function patchModels(mesh: Mesh): void {
     if (!modelsPublic.length || modelsPublic.includes(modelName)) {
       let model = models[modelName];
 
-      patchModelAttributes(model, mesh.self.id);
+      patchModelAttributes(model);
 
       const patch = (model: any, action: string, func: (values: Values) => void) => {
         model[action] = (previousAction =>
